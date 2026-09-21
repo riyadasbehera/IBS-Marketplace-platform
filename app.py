@@ -88,24 +88,76 @@ def get_secret(name: str, default: Optional[str] = None) -> Optional[str]:
     return os.getenv(name, default)
 
 
+# ------------------------------------------------------------
+# Secrets / configuration
+# ------------------------------------------------------------
+
+def get_secret(name: str, default: Optional[str] = None) -> Optional[str]:
+    try:
+        if name in st.secrets:
+            value = st.secrets[name]
+
+            if value is not None and str(value).strip():
+                return str(value).strip()
+
+    except Exception as exc:
+        st.error(f"Could not read Streamlit secret '{name}': {exc}")
+
+    value = os.getenv(name, default)
+
+    if value is not None and str(value).strip():
+        return str(value).strip()
+
+    return default
+
+
 SUPABASE_URL = get_secret("SUPABASE_URL")
+
 SUPABASE_KEY = (
     get_secret("SUPABASE_SECRET_KEY")
     or get_secret("SUPABASE_SERVICE_ROLE_KEY")
     or get_secret("SUPABASE_KEY")
 )
+
 OPENAI_API_KEY = get_secret("OPENAI_API_KEY")
 OPENAI_MODEL = get_secret("OPENAI_MODEL", "gpt-4.1-mini")
 
 
 @st.cache_resource
 def get_supabase() -> Optional[Client]:
-    if not SUPABASE_URL or not SUPABASE_KEY:
+    if not SUPABASE_URL:
+        st.error(
+            "❌ SUPABASE_URL is missing. "
+            "Add SUPABASE_URL in Streamlit Cloud → Settings → Secrets."
+        )
         return None
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+    if not SUPABASE_KEY:
+        st.error(
+            "❌ SUPABASE_SECRET_KEY is missing. "
+            "Add SUPABASE_SECRET_KEY in Streamlit Cloud → Settings → Secrets."
+        )
+        return None
+
+    if not SUPABASE_URL.startswith("https://"):
+        st.error(
+            "❌ SUPABASE_URL does not look valid. "
+            "It should start with https://"
+        )
+        return None
+
+    try:
+        client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        return client
+
+    except Exception as exc:
+        st.error(f"❌ Could not connect to Supabase: {exc}")
+        return None
 
 
 db = get_supabase()
+
+
 
 
 # ------------------------------------------------------------
