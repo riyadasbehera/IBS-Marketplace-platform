@@ -1,4 +1,4 @@
-
+authlib
 streamlit>=1.64,<2
 supabase>=2.28,<3
 pandas>=2.2,<3
